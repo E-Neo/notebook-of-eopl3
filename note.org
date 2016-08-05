@@ -1,0 +1,601 @@
+#+TITLE: Notebook of Essentials of Programming Languages
+#+AUTHOR: E-Neo
+#+EMAIL: e-neo@qq.com
+#+DATE: 2016-07-25
+
+#+LaTeX_CLASS: article
+#+LaTeX_CLASS_OPTIONS: [a4paper]
+
+#+LaTeX_HEADER: \usepackage{xeCJK}
+#+LaTeX_HEADER: \usepackage{minted}
+#+LaTeX_HEADER: \usepackage{float}
+#+LaTex_HEADER: \usepackage[top=1.2in, bottom=1.2in, left=1.2in, right=1.2in]{geometry}
+#+LATEX_HEADER: \usepackage{setspace}
+\setlength{\parindent}{2em}
+
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE: en
+
+* About the book
+
+  #+CAPTION: Basic information about /Essentials of Programming Language/.
+  #+ATTR_LATEX: :placement [H] :align |c|c|
+  |------------------+-----------------------|
+  | Author           | Daniel P. Friedman    |
+  |                  | Mitchell Wand         |
+  |------------------+-----------------------|
+  | Subject          | Programming languages |
+  |------------------+-----------------------|
+  | Genre            | Textbook              |
+  |------------------+-----------------------|
+  | Publisher        | MIT Press             |
+  |------------------+-----------------------|
+  | Publication date | April 2008 (3rd ed.)  |
+  |------------------+-----------------------|
+  | Pages            | 416                   |
+  |------------------+-----------------------|
+  | ISBN             | 978-0-262-06279-4     |
+  |------------------+-----------------------|
+
+  - Start time: Mon Jul 25 19:39:43 CST 2016
+  - Finish time:
+
+* Table of contents
+
+  1. Inductive Sets of Data
+     1. Recursively Specified Data
+     2. Deriving Recursive Programs
+     3. Auxiliary Procedures and Context Arguments
+     4. Exercises
+  2. Data Abstraction
+     1. Specifying Data via Interfaces
+     2. Representation Strategies for Data Types
+     3. Interfaces for Recursive Data Types
+     4. A Tool for Defining Recursive Data Types
+     5. Abstract Syntax and Its Representation
+  3. Expressions
+     1. Specification and Implementation Strategy
+     2. LET: A Simple Language
+     3. PROC: A Language with Procedures
+     4. LETREC: A Language with Recursive Procedures
+     5. Scoping and Binding of Variables
+     6. Eliminating Variable Names
+     7. Implementing Lexical Addressing
+  4. State
+     1. Computational Effects
+     2. EXPLICIT-REFS: A Language with Explicit References
+     3. IMPLICIT-REFS: A Language with Implicit References
+     4. MUTABLE-PAIRS: A Language with Mutable Pairs
+     5. Parameter-Passing Variations
+  5. Continuation-Passing Interpreters
+     1. A Continuation-Passing Interpreter
+     2. A Trampolined Interpreter
+     3. An Imperative Interpreter
+     4. Exceptions
+     5. Threads
+  6. Continuation-Passing Style
+     1. Writing Programs in Continuation-Passing Style
+     2. Tail Form
+     3. Converting to Continuation-Passing Style
+     4. Modeling Computational Effects
+  7. Types
+     1. Values and Their Types
+     2. Assigning a Type to an Expression
+     3. CHECKED: A Type-Checked Language
+     4. INFERRED: A Language with Type Inference
+  8. Modules
+     1. The Simple Module System
+     2. Modules That Declare Types
+     3. Module Procedures
+  9. Objects and Classes
+     1. Object-Oriented Programming
+     2. Inheritance
+     3. The Language
+     4. The Interpreter
+     5. A Typed Language
+     6. The Type Checker
+  10. For Further Reading
+  11. The SLLGEN Parsing System
+      1. Scanning
+      2. Parsing
+      3. Scanners and Parsers in SLLGEN
+
+* Key points in each chapter
+
+  The interpreter for a computer language is just another program.
+
+** Inductive Sets of Data
+
+*** Recursively Specified Data
+
+**** Inductive Specification
+
+     - *(list of integers, top-down)*
+       A Scheme list is a list of integers if and only if either
+       1. it is the empty list, or
+       2. it is a pair whose car is an integer and whose cdr is a list of integers.
+     - *(list of integers, bottom-up)*
+       The set List-of-Int is the smallest set of Scheme lists
+       satisfying the following two properties:
+       1. () \in List-of-Int, and
+       2. if n \in Int and l \in List-of-Int, then (n . l) \in List-of-Int.
+     - *(list of integers, rules of inference)*
+       \[ () \in \textit{List-of-Int} \]
+       \[ \frac{n \in Int \qquad l \in \textit{List-of-Int}}
+       {(n \; . \; l) \in \textit{List-of-Int}} \]
+     #+INCLUDE: "src/in_s.scm" src scheme
+
+**** Defining Sets Using Grammars
+
+     \begin{equation*}
+     \begin{split}
+     \textit{List-of-Int} & ::= ()\\
+     \textit{List-of-Int} & ::= (Int \; . \; \textit{List-of-Int})
+     \end{split}
+     \end{equation*}
+     - *Nonterminal Symbols*. These are the names of the sets being defined. In
+        this case there is only one such set, but in general, there might be several
+        sets being defined. These sets are sometimes called /syntactic categories/.
+     - *Terminal Symbols*. These are the characters in the external representation,
+        in this case ., (, and ).
+     - *Productions*. The rules are called /productions/. Each production has a
+       left-hand side, which is a nonterminal symbol, and a right-hand side, which
+       consists of terminal and nonterminal symbols. The left- and right-hand
+       sides are usually separated by the symbol ::=, read /is/ or /can be/. The
+       right-hand side specifies a method for constructing members of the syntactic
+       category in terms of other syntactic categories and terminal symbols, such
+       as the left parenthesis, right parenthesis, and the period.
+     - It is common to omit the left-hand side of a production when it is the same
+       as the left-hand side of the preceding production.
+       \begin{equation*}
+       \begin{split}
+       \textit{List-of-Int} & ::= ()\\
+       & ::= (Int \; . \; \textit{List-of-Int})
+       \end{split}
+       \end{equation*}
+     - One can also write a set of rules for a single syntactic category by writing
+       the left-hand side and ::= just once, followed by all the right-hand sides
+       separated by the special symbol "|" (vertical bar, read /or/).
+       \[ \textit{List-of-Int} ::= () \quad | \quad (Int \; . \; \textit{List-of-Int}) \]
+     - Another shortcut is the /Kleene star/, expressed by the notation \( \{...\}^{∗} \).
+       When this appears in a right-hand side, it indicates a sequence of any number of
+       instances of whatever appears between the braces.
+       \[ \textit{List-of-Int} ::= (\{Int\}^{*}) \]
+     - A variant of the star notation is /Kleene plus/ \( \{...\}^{+} \) , which indicates
+       a sequence of one or more instances.
+       Still another variant of the star notation is the separated list notation.
+       For example, we write \( \{Int\}^{∗(c)} \) to denote a sequence of
+       any number of instances of the nonterminal /Int/,
+       separated by the non-empty character sequence /c/.
+     - If a set is specified by a grammar, a syntactic derivation may be used to show
+       that a given data value is a member of the set. Such a derivation starts with
+       the nonterminal corresponding to the set. At each step, indicated by an arrow
+       \Rightarrow
+       , a nonterminal is replaced by the right-hand side of a corresponding rule,
+       or with a known member of its syntactic class if the class was left undefined.
+     - Examples
+       - *(s-list, s-exp)*
+         \begin{equation*}
+         \begin{split}
+         \textit{S-list} & ::= (\{\textit{S-exp}\}^{*})\\
+         \textit{S-exp} & ::= \textit{Symbol} \quad | \quad \textit{S-list}
+         \end{split}
+         \end{equation*}
+       - *(binary tree)*
+         A binary tree with numeric leaves and interior nodes labeled with symbols
+         may be represented using three-element lists for the interior nodes by the grammar:
+         \[ Bintree ::= Int \quad | \quad (Symbol \quad Bintree \quad Bintree) \]
+       - *(lambda expression)*
+         \begin{equation*}
+         \begin{split}
+         LcExp & ::= Identifier\\
+         & ::= (lambda \quad (Identifier) \quad LcExp)\\
+         & ::= (LcExp \quad LcExp)
+         \end{split}
+         \end{equation*}
+         where an identifier is any symbol other than lambda.\\
+         The identifier in the second production is the name of a variable in the
+         body of the lambda expression. This variable is called the bound variable
+         of the expression, because it binds or captures any occurrences of the variable
+         in the body. Any occurrence of that variable in the body refers to this one.
+       These grammars are said to be /context-free/ because a rule defining a given
+       syntactic category may be applied in any context that makes reference to that
+       syntactic category. Sometimes this is not restrictive enough.\\
+       To determine whether a particular production can be applied in a particular
+       syntactic derivation, we have to look at the context in which the production
+       is applied.
+       Such constraints are called /context-sensitive constraints/ or /invariants/.
+
+**** Induction
+
+     Having described sets inductively, we can use the inductive definitions in
+     two ways: to prove theorems about members of the set and to write programs
+     that manipulate them.
+
+     *Proof by Structural Induction*\\
+     To prove that a proposition IH(s) is true for all structures /s/, prove the following:
+     1. IH is true on simple structures (those without substructures).
+     2. If IH is true on the substructures of /s/, then it is true on /s/ itself.
+
+*** Deriving Recursive Programs
+
+    *The Smaller-Subproblem Principle*:
+    If we can reduce a problem to a smaller subproblem, we can call the procedure
+    that solves the problem to solve the subproblem.
+
+**** list-length
+
+     The standard Scheme procedure length determines the number of elements in a list.
+
+     The set of list:
+     \[ List ::= () \quad | \quad (Scheme \, value \; . \; List) \]
+     #+INCLUDE: "src/list_length.scm" src scheme
+
+**** nth-element
+
+     The standard Scheme procedure list-ref takes a list lst and a zero-based
+     index n and returns element number n of lst.
+     #+INCLUDE: "src/nth_element.scm" src scheme
+
+**** remove-first
+
+     The procedure remove-first should take two arguments: a symbol, s, and
+     a list of symbols, los. It should return a list with the same elements arranged
+     in the same order as los, except that the first occurrence of the symbol s is
+     removed. If there is no occurrence of s in los, then los is returned.
+     \[ \textit{List-of-Symbol} ::= () \quad | \quad
+     (Symbol \; . \; \textit{List-of-Symbol}) \]
+     #+INCLUDE: "src/remove_first.scm" src scheme
+
+**** occurs-free?
+
+     We say that a variable occurs free in an expression exp if it has some
+     occurrence in exp that is not inside some lambda binding of the same variable.
+     - If the expression e is a variable, then the variable x occurs free in e if
+       and only if x is the same as e.
+     - If the expression e is of the form \( (lambda (y) e') \), then the variable
+       x occurs free in e if and only if y is different from x and x occurs free in e'.
+     - If the expression e is of the form \( (e_1 \; e_2) \), then x occurs free in e
+       if and only if it occurs free in e_1 or e_2.
+       #+INCLUDE: "src/occurs_free.scm" src scheme
+
+**** subst
+
+     The procedure subst should take three arguments: two symbols, new and
+     old, and an s-list, slist. All elements of slist are examined, and a
+     new list is returned that is similar to slist but with all occurrences of old
+     replaced by instances of new.
+     #+INCLUDE: "src/subst.scm" src scheme
+
+     *Follow the Grammar!*\\
+     When defining a procedure that operates on inductively defined data, the
+     structure of the program should be patterned after the structure of the data.
+     - Write one procedure for each nonterminal in the grammar. The procedure
+       will be responsible for handling the data corresponding to that nonterminal,
+       and nothing else.
+     - In each procedure, write one alternative for each production corresponding
+       to that nonterminal. You may need additional case structure, but this
+       will get you started. For each nonterminal that appears in the right-hand
+       side, write a recursive call to the procedure for that nonterminal.
+
+*** Auxiliary Procedures and Context Arguments
+
+    #+INCLUDE: "src/number_elements.scm" src scheme
+    *No Mysterious Auxiliaries!*\\
+    When defining an auxiliary procedure, always specify what it does on all
+    arguments, not just the initial values.
+    #+INCLUDE: "src/list_sum.scm" src scheme
+    #+INCLUDE: "src/vector_sum.scm" src scheme
+
+*** Exercises
+
+    #+INCLUDE: "src/duple.scm" src scheme
+    #+INCLUDE: "src/invert.scm" src scheme
+    #+INCLUDE: "src/down.scm" src scheme
+    #+INCLUDE: "src/swapper.scm" src scheme
+    #+INCLUDE: "src/list_set.scm" src scheme
+    #+INCLUDE: "src/count_occurrences.scm" src scheme
+    #+INCLUDE: "src/product.scm" src scheme
+    #+INCLUDE: "src/filter_in.scm" src scheme
+    #+INCLUDE: "src/list_index.scm" src scheme
+    #+INCLUDE: "src/every.scm" src scheme
+    #+INCLUDE: "src/exists.scm" src scheme
+    #+INCLUDE: "src/up.scm" src scheme
+    #+INCLUDE: "src/flatten.scm" src scheme
+    #+INCLUDE: "src/merge.scm" src scheme
+    #+INCLUDE: "src/sort.scm" src scheme
+    #+INCLUDE: "src/sort_predicate.scm" src scheme
+
+** Data Abstraction
+
+*** Specifying Data via Interfaces
+
+    - The most important part of an implementation is the specification
+      of how the data is represented. We use the notation
+      \( \lceil v \rceil \) for "the representation of data v."
+    - Most interfaces will contain some /constructors/ that build elements of
+      the data type, and some /observers/ that extract information from values of
+      the data type.
+    - the data type of natural numbers:
+      1. Unary representation: In the unary representation,
+         the natural number n is represented by a list of n #t's.
+      2. Scheme number representation: In this representation,
+         we simply use Scheme’s internal representation of numbers.
+      3. Bignum representation: In the bignum representation, numbers are
+         represented in base N, for some large integer N. The representation
+         becomes a list consisting of numbers between 0 and N - 1
+         (sometimes called bigits rather than digits).
+      #+INCLUDE: "src/natural_numbers.scm" src scheme
+    - If the representation of a type is hidden, so it cannot be exposed by
+      any operation (including printing), the type is said to be opaque. Otherwise,
+      it is said to be transparent.
+
+*** Representation Strategies for Data Types
+
+**** The Environment Interface
+
+     - An environment is a function whose domain is a finite set of variables,
+       and whose range is the set of all Scheme values.
+     - ~empty-env~ and ~extend-env~ are the constructors,
+       and ~apply-env~ is the only observer.
+
+**** Data Structure Representation
+
+     \begin{equation*}
+     \begin{split}
+     \textit{Env-exp} & ::= (\text{empty-env})\\
+     & ::= (\text{extend-env} \quad \textit{Identifier} \quad
+     \textit{Scheme-value} \quad \textit{Env-exp})
+     \end{split}
+     \end{equation*}
+     - *The Interpreter Recipe*
+       1. Look at a piece of data.
+       2. Decide what kind of data it represents.
+       3. Extract the components of the datum and do the right thing with them.
+     #+INCLUDE: "src/environment0.scm" src scheme
+
+**** Procedural Representation
+
+     - The environment interface has an important property: it has exactly one
+       observer, apply-env. This allows us to represent an environment as a
+       Scheme procedure that takes a variable and returns its associated value.
+       #+INCLUDE: "src/environment1.scm" src scheme
+     We call this a /procedural representation/, in which the data is represented by
+     its action under ~apply-env~.
+
+*** Interfaces for Recursive Data Types
+
+    #+INCLUDE: "src/lcexp_interface0.scm" src scheme
+    Another implementation:
+    #+INCLUDE: "src/lcexp_interface3.scm" src scheme
+    - *Designing an interface for a recursive data type*
+      1. Include one constructor for each kind of data in the data type.
+      2. Include one predicate for each kind of data in the data type.
+      3. Include one extractor for each piece of data passed to a constructor
+         of the data type.
+
+*** A Tool for Defining Recursive Data Types
+
+    #+INCLUDE: "src/lcexp_interface1.scm" src scheme
+    Syntax: ~define-datatype~, ~cases~:
+    #+INCLUDE: "src/datatype.scm" src scheme
+    In general, a ~define-datatype~ declaration has the form
+    \begin{equation*}
+    \begin{split}
+    (\text{define-datatype} \;\; \textit{type-name} \;\; \textit{type-predicate-name}\\
+    \{(\textit{variant-name} \;\;
+    \{(\textit{field-name} \;\; \textit{predicate})\}^{*})\}^{+})
+    \end{split}
+    \end{equation*}
+    The general syntax of ~cases~ is
+    \begin{equation*}
+    \begin{split}
+    (\text{cases} & \;\; \textit{type-name} \;\; \textit{expression}\\
+    & \{(\textit{variant-name} \;\; (\{\textit{field-name}\}^{*}) \;\;
+    \textit{consequent})\}^{*}\\
+    & (\text{else} \;\; \textit{default}))
+    \end{split}
+    \end{equation*}
+    #+INCLUDE: "src/lcexp_interface2.scm" src scheme
+    #+INCLUDE: "src/slist.scm" src scheme
+    The form ~define-datatype~ is an example of a domain-specific language.
+    A /domain-specific language/ is a small language for describing a single task
+    among a small, well-defined set of tasks.
+
+*** Abstract Syntax and Its Representation
+
+    - A grammar usually specifies a particular representation of an inductive data
+      type: one that uses the strings or values generated by the grammar. Such a
+      representation is called concrete syntax, or external representation.
+    - If the concrete syntax is a set of strings of characters, it may be a complex
+      undertaking to derive the corresponding abstract syntax tree. This task is
+      called parsing and is performed by a parser.
+    - A parser generator takes as input a grammar and produces a parser. Since the
+      grammars are processed by a tool, they must be written in some machine-readable
+      language: a domain-specific language for writing grammars.
+
+** Expressions
+
+*** Specification and Implementation Strategy
+
+    - We start with the text of the program written in the language we are
+      implementing. This is called the source language or the defined language.
+      Program text (a program in the source language) is passed through a front
+      end that converts it to an abstract syntax tree. The syntax tree is then
+      passed to the interpreter, which is a program that looks at a data structure
+      and performs some actions that depend on its structure.
+      Of course the interpreter is itself written in some language. We
+      call that language the implementation language or the defining language.
+    - Another common organization: There the interpreter is replaced by a compiler,
+      which translates the abstract syntax tree into a program in some other language
+      (the target language), and that program is executed.
+      That target language may be executed by an interpreter or it may be translated
+      into some even lower-level language for execution.
+    - Most often, the target language is a machine language, which is interpreted
+      by a hardware machine. Yet another possibility is that the target machine is
+      a special-purpose language that is simpler than the original and for which
+      it is relatively simple to write an interpreter. This allows the program to be
+      compiled once and then executed on many different hardware platforms. For
+      historical reasons, such a target language is often called a byte code, and its
+      interpreter is called a virtual machine.
+    - A compiler is typically divided into two parts: an analyzer that attempts
+      to deduce useful information about the program, and a translator that does
+      the translation, possibly using information from the analyzer. Each of these
+      phases may be specified either by rules of inference or a special-purpose
+      specification language, and then implemented.
+    - No matter what implementation strategy we use, we need a front end
+      that converts programs into abstract syntax trees. Because programs are
+      just strings of characters, our front end needs to group these characters into
+      meaningful units. This grouping is usually divided into two stages: scanning
+      and parsing.
+
+*** LET: A Simple Language
+
+**** Specifying the Syntax
+
+     Syntax for the LET language:
+     \begin{equation*}
+     \begin{split}
+     \textit{Program} ::= & \textit{Expression}\\
+     & \fbox{a-program (exp1)}\\
+     \textit{Expression} ::= & \textit{Number}\\
+     & \fbox{const-exp (num)}\\
+     \textit{Expression} ::= & -(\textit{Expression}\;\;\textit{Expression})\\
+     & \fbox{diff-exp (exp1 exp2)}\\
+     \textit{Expression} ::= & \text{zero?}\;\;(\textit{Number})\\
+     & \fbox{zero?-exp (exp1)}\\
+     \textit{Expression} ::= & \text{if} \;\; \textit{Expression} \;\;
+     \text{then}\;\;\textit{Expression}\;\;\text{else}\;\;\textit{Expression}\\
+     & \fbox{if-exp (exp1 exp2 exp3)}\\
+     \textit{Expression} ::= & \textit{Identifier}\\
+     & \fbox{var-exp (var)}\\
+     \textit{Expression} ::= & \text{let} \;\; \textit{Identifier} \;\;
+     \text{=}\;\;\textit{Expression}\;\;\text{in}\;\;\textit{Expression}\\
+     & \fbox{let-exp (var exp1 body)}
+     \end{split}
+     \end{equation*}
+
+**** Specification of Values
+
+     Each language has at least two such sets: the expressed values
+     and the denoted values. The expressed values are the possible values
+     of expressions, and the denoted values are the values bound to variables.
+
+**** Environments
+
+     An environment is a function whose domain is a finite set of variables and
+     whose range is the denoted values. We use some abbreviations when writing
+     about environments.
+     - \rho ranges over environments.
+     - \([\,]\) denotes the empty environment.
+     - \([var = val]\)\rho denotes
+       \((\text{extend-env}\;\;\textit{var}\;\;\textit{val}\;\;\rho)\).
+     - \([var_1 = val_1, var_2 = val_2]\rho\) abbreviates
+       \([var_1 = val_1]([var_2 = val_2]\rho)\), etc.
+     - \([var_1 = val_1, var_2 = val_2, ...]\) denotes the environment in which the
+       value of var_1 is val_1, etc.
+
+**** Specifying the Behavior of Expressions
+
+     There are six kinds of expressions in our language: one for each production
+     with Expression as its left-hand side.
+     We use \(\textit{ExpVal}\) to denote the set of expressed values.
+
+     constructors:
+     \begin{equation*}
+     \begin{split}
+     \text{const-exp} &: Int \rightarrow Exp\\
+     \text{zero?-exp} &: Exp \rightarrow Exp\\
+     \text{if-exp} &: Exp \times Exp \times Exp \rightarrow Exp\\
+     \text{diff-exp} &: Exp \times Exp \rightarrow Exp\\
+     \text{var-exp} &: Var \rightarrow Exp\\
+     \text{let-exp} &: Var \times Exp \times Exp \rightarrow Exp
+     \end{split}
+     \end{equation*}
+     observer:
+     \[
+     \text{value-of} :  Exp \times Env \rightarrow ExpVal
+     \]
+     we write \(<<exp>>\) to denote the AST for expression exp.
+     We also write \(\lceil n \rceil\) in place of \((\text{num-val} \;\; n)\),
+     and \(\lfloor val \rfloor\) in place of \((\text{expval->num}\;\; val)\).
+     We will also use the fact that \(\lfloor \lceil n \rceil \rfloor = n\).
+
+**** Specifying the Behavior of Programs
+
+     In our language, a whole program is just an expression. In order to find the
+     value of such an expression, we need to specify the values of the free
+     variables in the program. So the value of a program is just the value of that
+     expression in a suitable initial environment.
+
+**** Specifying Conditionals
+
+     \begin{equation*}
+     \begin{split}
+     & \frac{(\text{value-of} \;\; exp_1 \;\; \rho) = val_1}
+     {(\text{value-of} \;\; (\text{zero?-exp} \;\; exp_1) \;\; \rho)}\\
+     & = \left\{
+     \begin{array}{c}
+     (\text{bool-val} \;\; \#t) \quad if \quad (\text{expval->num} \;\; val_1) = 0\\
+     (\text{bool-val} \;\; \#t) \quad if \quad (\text{expval->num} \;\; val_1) \neq 0
+     \end{array}
+     \right
+     \end{split}
+     \end{equation*}
+
+     \begin{equation*}
+     \begin{split}
+     & \frac{(\text{value-of} \;\; exp_1 \;\; \rho) = val_1}
+     {(\text{value-of} \;\; (\text{if-exp} \;\; exp_1 \;\; exp_2 \;\; exp_3) \;\; \rho)}\\
+     & = \left\{
+     \begin{array}{c}
+     (\text{value-of} \;\; exp_2 \;\; \rho) \quad
+     if \quad (\text{expval->num} \;\; val_1) = \#t\\
+     (\text{value-of} \;\; exp_3 \;\; \rho) \quad
+     if \quad (\text{expval->num} \;\; val_1) = \#f
+     \end{array}
+     \right
+     \end{split}
+     \end{equation*}
+
+     \begin{equation*}
+     \begin{split}
+     & (\text{value-of} \;\; (\text{if-exp} \;\; exp_1 \;\; exp_2 \;\; exp_3) \;\; \rho)\\
+     & = (\text{if} \;\; (\text{expval->bool} \;\; (\text{value-of} \;\; exp_1 \;\; \rho))\\
+     & \qquad (\text{value-of} \;\; exp_2 \;\; \rho)\\
+     & \qquad (\text{value-of} \;\; exp_3 \;\; \rho))
+     \end{split}
+     \end{equation*}
+
+**** Specifying let
+
+     \begin{equation*}
+     \begin{split}
+     & \frac{(\text{value-of} \;\; exp_1 \;\; \rho) = val_1}
+     {(\text{value-of} \;\; (\text{let-exp} \;\; var \;\; exp_1 \;\; body) \;\; \rho)}\\
+     & = (\text{value-of} \;\; body \;\; [var = val_1]\rho)
+     \end{split}
+     \end{equation*}
+
+     \begin{equation*}
+     \begin{split}
+     & (\text{value-of} \;\; (\text{let-exp} \;\; var \;\; exp_1 \;\; body) \;\; \rho)\\
+     & = (\text{value-of} \;\; body \;\; [var = (\text{value-of} \;\; exp_1 \;\; \rho)]\rho)
+     \end{split}
+     \end{equation*}
+
+**** Implementing the Specification of LET
+
+     #+INCLUDE: "src/let.scm" src scheme
+
+*** PROC: A Language with Procedures
+*** LETREC: A Language with Recursive Procedures
+*** Scoping and Binding of Variables
+*** Eliminating Variable Names
+*** Implementing Lexical Addressing
+
+* References
+
+  - Essentials of programming languages / Daniel P. Friedman, Mitchell Wand. -3rd ed.
+    ISBN 978-0-262-06279-4
