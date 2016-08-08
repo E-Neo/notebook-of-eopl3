@@ -590,10 +590,203 @@
      #+INCLUDE: "src/let.scm" src scheme
 
 *** PROC: A Language with Procedures
+
+    \[ ExpVal = Int + Bool + Proc \]
+    \[ DenVal = Int + Bool + Proc \]
+
+    \begin{equation*}
+    \begin{split}
+    \textit{Expression} ::= & \text{proc} \;\; (Identifier) \;\; \textit{Expression}\\
+    & \fbox{proc-exp (var body)}\\
+    \textit{Expression} ::= & (\textit{Expression} \;\; \textit{Expression}) \\
+    & \fbox{call-exp (rator rand)}
+    \end{split}
+    \end{equation*}
+
+    \begin{equation*}
+    \begin{split}
+    & (\text{value-of} \;\; (\text{proc-exp} \;\; var \;\; body) \;\; \rho)\\
+    & = (\text{proc-val} \;\; (\text{procedure} \;\; var \;\; body \;\; \rho))\\
+    \end{split}
+    \end{equation*}
+
+    \begin{equation*}
+    \begin{split}
+    & (\text{value-of} \;\; (\text{call-exp} \;\; rator \;\; rand) \;\; \rho)\\
+    & = (\text{let} \;\; ((\text{proc} \;\; (\text{expval->proc} \;\;
+    (\text{value-of} \;\; rator \;\; \rho)))\\
+    & \qquad \qquad (\text{arg} \;\; (\text{value-of} \;\; rand \;\; \rho)))\\
+    & \qquad \quad (\text{apply-procedure} \;\; \text{proc} \;\; \text{arg}))
+    \end{split}
+    \end{equation*}
+
+    \begin{equation*}
+    \begin{split}
+    & (\text{apply-procedure} \;\;
+    (\text{procedure} \;\; var \;\; body \;\; \rho) \;\; val)\\
+    & = (\text{value-of} \;\; body \;\; [var=val]\rho)
+    \end{split}
+    \end{equation*}
+
+**** An Example
+
+     #+INCLUDE: "src/proc_example.scm" src scheme
+
+**** Representing Procedures
+
+     \begin{equation*}
+     \begin{split}
+     & (\text{apply-procedure} \;\;
+     (\text{procedure} \;\; var \;\; body \;\; \rho) \;\; val)\\
+     & = (\text{value-of} \;\; body \;\;
+     (\text{extend-env} \;\; var \;\; val \;\; \rho))
+     \end{split}
+     \end{equation*}
+     #+INCLUDE: "src/proc.scm" src scheme
+
 *** LETREC: A Language with Recursive Procedures
+
+    \begin{equation*}
+    \begin{split}
+    Expression ::= & \text{letrec} \;\; Identifier \;\; (Identifier)
+    = Expression \;\; \text{in} \;\; Expression\\
+    & \fbox{letrec-exp (p-name b-var p-body letrec-body)}
+    \end{split}
+    \end{equation*}
+
+    \begin{equation*}
+    \begin{split}
+    & (\text{value-of}\\
+    & \quad (\text{letrec-exp} \;\; \textit{proc-name} \;\; \textit{bound-var} \;\;
+    \textit{proc-body} \;\; \textit{letrec-body})\\
+    & \quad \rho)\\
+    & = (\text{value-of}\\
+    & \qquad \textit{letrec-body}\\
+    & \qquad (\text{extend-env-rec} \;\; \textit{proc-name} \;\;
+    \textit{bound-var} \;\; \textit{proc-body} \;\; \rho))
+    \end{split}
+    \end{equation*}
+
+    Example:
+    #+INCLUDE: "src/letrec_example.scm" src scheme
+
+    1. If the variable /var/ is the same as /proc-name/, then
+       \( (\text{apply-env} \;\; \rho_1 \;\; var) \)
+       should produce a closure whose bound variable is /bound-var/, whose body
+       is /proc-body/, and with an environment in which /proc-name/ is bound to this
+       procedure. But we already have such an environment, namely \(\rho_1\) itself!
+       So
+       \begin{equation*}
+       \begin{split}
+       & (\text{apply-env} \;\; \rho_1 \;\; \textit{proc-name})\\
+       & = (\text{proc-val} \;\; (\text{procedure} \;\; \textit{bound-var} \;\;
+       \textit{proc-body} \;\; \rho_1))
+       \end{split}
+       \end{equation*}
+    2. If /var/ is not the same as /proc-name/, then
+       \[
+       (\text{apply-env} \;\; \rho_1 \;\; \textit{proc-name})
+       = (\text{apply-env} \;\; \rho \;\; \textit{proc-name})
+       \]
+    #+INCLUDE: "src/letrec.scm" src scheme
+
 *** Scoping and Binding of Variables
+
+    In most programming languages, variables may appear in two different ways:
+    as references or as declarations.
+    A variable reference is a use of the variable.
+    A declaration introduces the variable as a name for some value.
+
+    We say that a variable reference is bound by the declaration with which it is
+    associated, and that it is bound to its value.
+
+    Every programming language must have some rules to determine the
+    declaration to which each variable reference refers. These rules are typically
+    called scoping rules. The portion of the program in which a declaration is
+    valid is called the scope of the declaration.
+
+    We can determine which declaration is associated with each variable use
+    without executing the program. Properties like this, which can be computed
+    without executing the program, are called static properties.
+
+    Under lexical scoping, we can create a hole in a scope by redeclaring a
+    variable. Such an inner declaration shadows the outer one.
+
+    Lexical scopes are nested: each scope lies entirely within another scope.
+    We can illustrate this with a contour diagram.
+    A box surrounds each scope, and a vertical
+    line connects each declaration to its scope.
+
+    The association between a variable and its value is called a binding.
+
+    Bindings have semi-infinite extent, meaning that once a variable gets bound,
+    that binding must be maintained indefinitely (at least potentially).
+    This is because the binding might be hidden inside a closure that is returned.
+    In languages with semi-infinite extent, the garbage collector collects bindings
+    when they are no longer reachable. This is only determinable at run-time,
+    so we say that this is a dynamic property.
+
 *** Eliminating Variable Names
+
+    Execution of the scoping algorithm may then be viewed as a journey
+    outward from a variable reference. In this journey a number of contours may be
+    crossed before arriving at the associated declaration. The number of contours
+    crossed is called the lexical (or static) depth of the variable reference. It is
+    customary to use “zero-based indexing,” thereby not counting the last contour
+    crossed.
+
 *** Implementing Lexical Addressing
+
+    We now implement the lexical-address analysis we sketched above. We
+    write a procedure ~translation-of-program~ that takes a program and
+    removes all the variables from the declarations, and replaces every variable
+    reference by its lexical depth.
+
+**** The Translator
+
+     \begin{equation*}
+     \begin{split}
+     Expression ::= & \% \text{lexref} \;\; number\\
+     & \fbox{nameless-var-exp (num)}\\
+     Expression ::= & \% \text{let} \;\; Expression \;\; \text{in} \;\; Expression\\
+     & \fbox{nameless-let-exp (exp1 body)}\\
+     Expression ::= & \% \text{lexproc} \;\; Expression\\
+     & \fbox{nameless-proc-exp (body)}
+     \end{split}
+     \end{equation*}
+     #+INCLUDE: "src/static_environment.scm" src scheme
+
+     We are trying to translate an expression e which is sitting inside the
+     declarations represented by senv. To do this, we recursively copy the tree,
+     except that
+     1. Every ~var-exp~ is replaced by a ~nameless-var-exp~ with the right lexical address,
+        which we compute by calling ~apply-senv~.
+     2. Every ~let-exp~ is replaced by a ~nameless-let-exp~. The right-hand
+        side of the new expression will be the translation of the right-hand side
+        of the old expression. This is in the same scope as the original, so we
+        translate it in the same static environment senv. The body of the new
+        expression will be the translation of the body of the old expression. But
+        the body now lies in a new scope, with the additional bound variable /var/.
+        So we translate the body in the static environment
+        \( (\text{extend-senv} \;\; var \;\; senv) \).
+     3. Every proc-exp is replaced by a ~nameless-proc-exp~, with the body
+        translated with respect to the new scope, represented by the
+        static environment \( (\text{extend-senv} \;\; var \;\; senv) \).
+     #+INCLUDE: "src/translator.scm" src scheme
+
+**** The Nameless Interpreter
+
+     #+BEGIN_SRC scheme
+(load "eopl/datatype.scm")
+(load "nameless_environment.scm")
+(load "static_environment.scm")
+(load "translator.scm")
+     #+END_SRC
+
+     #+INCLUDE: "src/nameless_environment.scm" src scheme
+     #+INCLUDE: "src/nameless_interpreter.scm" src scheme
+
+** State
 
 * References
 

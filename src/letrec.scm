@@ -1,9 +1,15 @@
-;;; LET Language
+;;; LETREC: A Language with Recursive Procedures
 
 
 (use-modules (eopl datatype)
              (eopl environment))
 
+
+(define-datatype proc proc?
+  (procedure
+   (var symbol?)
+   (body expression?)
+   (saved-env environment?)))
 
 (define-datatype program program?
   (a-program
@@ -26,63 +32,56 @@
   (let-exp
    (var symbol?)
    (exp1 expression?)
-   (body expression?)))
+   (body expression?))
+  (proc-exp
+   (var symbol?)
+   (body expression?))
+  (call-exp
+   (rator expression?)
+   (rand expression?))
+  (letrec-exp
+   (p-name symbol?)
+   (b-var symbol?)
+   (p-body expression?)
+   (letrec-body expression?)))
 
 (define-datatype expval expval?
   (num-val
    (num number?))
   (bool-val
-   (bool boolean?)))
-
-
-;;; init-env : () -> Env
-;;; usage: (init-env) = [i=|1|, v=|5|, x=|10|]
-
-(define (init-env)
-  (extend-env
-   'i (num-val 1)
-   (extend-env
-    'v (num-val 5)
-    (extend-env
-     'x (num-val 10)
-     (empty-env)))))
+   (bool boolean?))
+  (proc-val
+   (proc proc?)))
 
 
 (define (report-expval-extractor-error field-name val)
   (error "ExpVal extractro error" field-name val))
-
-
-;;; expval->num : ExpVal -> Int
-
 (define (expval->num val)
   (cases expval val
          (num-val (num) num)
          (else (report-expval-extractor-error 'num val))))
-
-
-;;; expval->bool : ExpVal -> Bool
-
 (define (expval->bool val)
   (cases expval val
          (bool-val (bool) bool)
          (else (report-expval-extractor-error 'bool val))))
+(define (expval->proc val)
+  (cases expval val
+         (proc-val (proc) proc)
+         (else (report-expval-extractor-error 'bool val))))
 
 
-;;; scan&parse : String -> Program
+;;; apply-procedure : Proc * ExpVal -> ExpVal
 
-(define (scan&parse string)
-  ;; TODO
-  (a-program
-   (let-exp 'i (var-exp 'x)
-            (if-exp (zero?-exp (const-exp 0))
-                    (diff-exp (var-exp 'i) (var-exp 'x))
-                    (var-exp 'i)))))
+(define (apply-procedure proc1 val)
+  (cases proc proc1
+         (procedure (var body saved-env)
+                    (value-of body (extend-env var val saved-env)))))
 
 
-;;; run : String -> ExpVal
+;;; init-env : () -> Env
 
-(define (run string)
-  (value-of-program (scan&parse string)))
+(define (init-env)
+  (empty-env))
 
 
 ;;; value-of-program : Program -> ExpVal
@@ -119,4 +118,14 @@
          (let-exp (var exp1 body)
                   (let ((val1 (value-of exp1 env)))
                     (value-of body
-                              (extend-env var val1 env))))))
+                              (extend-env var val1 env))))
+         (proc-exp (var body)
+                   (proc-val (procedure var body env)))
+         (call-exp (rator rand)
+                   (let ((proc (expval->proc (value-of rator env)))
+                         (arg (value-of rand env)))
+                     (apply-procedure proc arg)))
+         (letrec-exp (p-name b-var p-body letrec-body)
+                     (value-of letrec-body
+                               (extend-env-rec p-name b-var p-body
+                                               env)))))
